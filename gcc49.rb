@@ -63,13 +63,6 @@ class Gcc49 < Formula
   deprecated_option "enable-profiled-build" => "with-profiled-build"
   deprecated_option "disable-multilib" => "without-multilib"
 
-  depends_on "gmp4"
-  depends_on "libmpc08"
-  depends_on "mpfr2"
-  depends_on "cloog018"
-  depends_on "isl011"
-  depends_on "ecj" if build.with?("java") || build.with?("all-languages")
-
   fails_with :llvm
 
   # The bottles are built on systems with the CLT installed, and do not work
@@ -101,17 +94,11 @@ class Gcc49 < Formula
     version_suffix = version.to_s.slice(/\d\.\d/)
 
     args = [
-      "--build=#{arch}-apple-darwin#{osmajor}",
       "--prefix=#{prefix}",
       "--libdir=#{lib}/gcc/#{version_suffix}",
       "--enable-languages=#{languages.join(",")}",
       # Make most executables versioned to avoid conflicts.
       "--program-suffix=-#{version_suffix}",
-      "--with-gmp=#{Formula["gmp4"].opt_prefix}",
-      "--with-mpfr=#{Formula["mpfr2"].opt_prefix}",
-      "--with-mpc=#{Formula["libmpc08"].opt_prefix}",
-      "--with-cloog=#{Formula["cloog018"].opt_prefix}",
-      "--with-isl=#{Formula["isl011"].opt_prefix}",
       "--with-system-zlib",
       "--enable-libstdcxx-time=yes",
       "--enable-stage1-checking",
@@ -127,6 +114,7 @@ class Gcc49 < Formula
       "--with-bugurl=https://github.com/Homebrew/homebrew-versions/issues",
     ]
 
+    args << "--build=#{arch}-apple-darwin#{osmajor}" if OS.mac?
     # "Building GCC with plugin support requires a host that supports
     # -fPIC, -shared, -ldl and -rdynamic."
     args << "--enable-plugin" if MacOS.version > :tiger
@@ -136,10 +124,6 @@ class Gcc49 < Formula
     args << "--with-dwarf2" if MacOS.version < :leopard
 
     args << "--disable-nls" if build.without? "nls"
-
-    if build.with?("java") || build.with?("all-languages")
-      args << "--with-ecj-jar=#{Formula["ecj"].opt_prefix}/share/java/ecj.jar"
-    end
 
     if !MacOS.prefer_64_bit? || build.without?("multilib")
       args << "--disable-multilib"
@@ -158,6 +142,9 @@ class Gcc49 < Formula
         args << "--with-native-system-header-dir=/usr/include"
         args << "--with-sysroot=#{MacOS.sdk_path}"
       end
+
+      system "cd .. && ./contrib/download_prerequisites"
+      system "cd .. && ./contrib/download_ecj" if build.with?("java") || build.with?("all-languages")
 
       system "../configure", *args
 
